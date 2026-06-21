@@ -4,6 +4,8 @@ let body = document.querySelector("body");
 let taskInput = document.querySelector("#taskInput");
 let taskList = document.querySelector(".taskList");
 
+let API = "https://6a374d6bc105017aa638ddf8.mockapi.io/todo/api/v1/todos";
+
 function createButton(className, text, handler) {
   const btn = document.createElement("button");
   btn.className = className;
@@ -65,10 +67,15 @@ function createTaskActions(taskItem, taskText) {
 }
 
 // Function to create a new task
-function createNewTask(task, length) {
+function createNewTask(task, length, task_id) {
   const taskItem = document.createElement("li");
   taskItem.className = "taskItem";
   taskItem.id = `task_${length + 1}`;
+
+  taskItem.dataset.taskId = task_id;
+  console.log(
+    `The value of taskItem.dataset.taskId = ${taskItem.dataset.taskId}`,
+  );
 
   const taskTextContent = `Task ${length + 1} : ${task}`;
 
@@ -131,7 +138,10 @@ addBtn.addEventListener("click", () => {
   console.log(taskInput.value);
   if (addBtn.textContent === "Add") {
     if (taskInput.value.trim() != "") {
-      createNewTask(taskInput.value, taskList.children.length);
+      postData(`${taskInput.value}`, (newTask) => {
+        createNewTask(newTask.text, taskList.children.length, newTask.id);
+        console.log(`The task Id of newly created DB Task is : ${newTask.id}`);
+      });
     }
   } else {
     updateTask();
@@ -144,7 +154,12 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     if (addBtn.textContent === "Add") {
       if (taskInput.value.trim() != "") {
-        createNewTask(taskInput.value, taskList.children.length);
+        postData(`${taskInput.value}`, (newTask) => {
+          createNewTask(newTask.text, taskList.children.length, newTask.id);
+          console.log(
+            `The task Id of newly created DB Task is : ${newTask.id}`,
+          );
+        });
       }
     } else {
       updateTask();
@@ -176,9 +191,54 @@ function updateTask() {
   updateTaskContent(taskInput, taskItems[taskIndex], taskIndex);
   addBtn.textContent = "Add";
   taskInput.value = "";
+  taskInput.dataset.ref = "";
 }
 
 function getCurrentTaskIndex(taskList, taskItem) {
   return [...taskList.children].indexOf(taskItem);
 }
 
+/* INTEGRATION of Database */
+async function fetchData() {
+  let response = await fetch(API);
+
+  let data = await response.json();
+
+  data.forEach((element) => {
+    createNewTask(element.text, taskList.children.length, element.id);
+  });
+
+  console.log(response);
+  console.log(data);
+
+  if (data.length !== 0) {
+    console.log(`ID : ${data[0].id}`);
+    console.log(`Content : ${data[0].text}`);
+  }
+}
+
+async function postData(task, callback) {
+  let objData = {
+    text: task.trim(),
+  };
+
+  let response = await fetch(API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(objData),
+  });
+
+  console.log(response);
+
+  let newTask = await response.json();
+  console.log(`Created task - ID : ${newTask.id}, Task : ${newTask.text}`);
+
+  // If a callback was provided, call it with the new task object
+  if (typeof callback === "function") {
+    callback(newTask);
+  }
+}
+
+fetchData();
