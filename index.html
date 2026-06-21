@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TO-DO List</title>
+
+    <!-- Fraunces for the heading (warm, characterful serif),
+         Inter for everything functional (input, button) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="mainContainer">
+      <header class="header">
+        <h2>Save your task here!</h2>
+        <p class="subtitle">
+          One line at a time. Nothing fancy, just a place to put it down.
+        </p>
+      </header>
+
+      <div class="inputContainer">
+        <input type="text" id="taskInput" placeholder="Enter your task" />
+        <button class="addBtn">Add</button>
+      </div>
+
+      <ul class="taskList">
+        <!-- <li class="taskItem">
+          <div class="taskLeft">
+            <label class="checkboxWrapper">
+              <input type="checkbox" class="taskCheckbox" />
+              <span class="customCheckbox"></span>
+            </label>
+            <span class="taskText">This is Demo task</span>
+          </div>
+          <div class="taskActions">
+            <button class="deleteBtn">Delete</button>
+            <button class="editBtn">Edit</button>
+          </div>
+        </li> -->
+      </ul>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
