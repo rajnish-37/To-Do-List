@@ -4,97 +4,96 @@ let body = document.querySelector("body");
 let taskInput = document.querySelector("#taskInput");
 let taskList = document.querySelector(".taskList");
 
-// Function to create a new task
-function createNewTask(task, length) {
-  let taskItem = document.createElement("li");
-  taskItem.className = "taskItem";
+function createButton(className, text, handler) {
+  const btn = document.createElement("button");
+  btn.className = className;
+  btn.textContent = text;
+  btn.addEventListener("click", handler);
+  return btn;
+}
 
-  /* Child of TaskItem */
-  let taskLeft = document.createElement("div");
+function createCheckbox(onChange) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "checkboxWrapper";
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.className = "taskCheckbox";
+  checkbox.addEventListener("change", onChange);
+
+  const custom = document.createElement("span");
+  custom.className = "customCheckbox";
+
+  wrapper.appendChild(checkbox);
+  wrapper.appendChild(custom);
+  return { wrapper, checkbox };
+}
+
+function createTaskLeft(text, checkboxWrapper) {
+  const taskLeft = document.createElement("div");
   taskLeft.className = "taskLeft";
 
-  /* Child of TaskLeft */
-  let checkboxWrapper = document.createElement("label");
-  checkboxWrapper.className = "checkboxWrapper";
+  const taskText = document.createElement("span");
+  taskText.className = "taskText";
+  taskText.textContent = text;
 
-  /* Child of CheckBoxWrapper */
-  let taskCheckbox = document.createElement("input");
-  taskCheckbox.type = "checkbox";
-  taskCheckbox.className = "taskCheckbox";
-  taskCheckbox.addEventListener("change", () => {
-    const taskItem = taskCheckbox.closest(".taskItem");
-    taskItem.classList.toggle("completed", taskCheckbox.checked);
+  taskLeft.appendChild(checkboxWrapper.wrapper);
+  taskLeft.appendChild(taskText);
+  return { taskLeft, taskText, checkbox: checkboxWrapper.checkbox };
+}
 
+function createTaskActions(taskItem, taskText) {
+  const taskActions = document.createElement("div");
+  taskActions.className = "taskActions";
+
+  const deleteBtn = createButton("deleteBtn", "Delete", () => {
+    let selectedTaskIndex = getCurrentTaskIndex(taskList, taskItem);
+    reorderingTasksUponDeletion(selectedTaskIndex + 1, taskList);
+    taskItem.remove();
+  });
+
+  const editBtn = createButton("editBtn", "Edit", () => {
+    let editedTask = extractTaskContent(taskText.textContent);
+    taskInput.value = editedTask;
+    taskInput.dataset.ref = getCurrentTaskIndex(taskList, taskItem);
+    addBtn.textContent = "Update";
+  });
+
+  taskActions.appendChild(deleteBtn);
+  taskActions.appendChild(editBtn);
+  return { taskActions, deleteBtn, editBtn };
+}
+
+// Function to create a new task
+function createNewTask(task, length) {
+  const taskItem = document.createElement("li");
+  taskItem.className = "taskItem";
+  taskItem.id = `task_${length + 1}`;
+
+  const taskTextContent = `Task ${length + 1} : ${task}`;
+
+  // Create checkbox + left section
+  const checkboxWrapper = createCheckbox(() => {
+    taskItem.classList.toggle("completed");
+    // toggle disable state
     deleteBtn.disabled = !deleteBtn.disabled;
     editBtn.disabled = !editBtn.disabled;
   });
 
-  /* Child of CheckBoxWrapper */
-  let customCheckbox = document.createElement("span");
-  customCheckbox.className = "customCheckbox";
+  const { taskLeft, taskText, checkbox } = createTaskLeft(
+    taskTextContent,
+    checkboxWrapper,
+  );
 
-  /* Child of TaskLeft */
-  let taskText = document.createElement("span");
-  taskText.className = "taskText";
+  // Create actions
+  const { taskActions, deleteBtn, editBtn } = createTaskActions(
+    taskItem,
+    taskText,
+  );
 
-  /* Child of TaskItem */
-  let taskActions = document.createElement("div");
-  taskActions.className = "taskActions";
-
-  /* Delete button - Child of TaskActions */
-  let deleteBtn = document.createElement("button");
-  deleteBtn.className = "deleteBtn";
-  deleteBtn.textContent = "Delete";
-  deleteBtn.addEventListener("click", () => {
-    let selectedTaskIndex = getCurrentTaskIndex(taskList, taskItem);
-
-    console.log(
-      `We are deleting task : ${taskItem.id} at position ${selectedTaskIndex + 1}`,
-    );
-
-    reorderingTasksUponDeletion(selectedTaskIndex + 1, taskList);
-
-    taskItem.remove();
-  });
-
-  /* Edit button - Child of TaskActions */
-  let editBtn = document.createElement("button");
-  editBtn.className = "editBtn";
-  editBtn.textContent = "Edit";
-  editBtn.addEventListener("click", () => {
-    console.log(
-      `I will edit the content of current task i.e.; ${taskText.textContent}`,
-    );
-    console.log(typeof extractTaskContent(taskText.textContent));
-
-    let editedTask = extractTaskContent(taskText.textContent);
-    taskInput.value = editedTask;
-
-    let selectedTaskIndex = getCurrentTaskIndex(taskList, taskItem);
-    taskInput.dataset.ref = selectedTaskIndex;
-    addBtn.textContent = "Update";
-  });
-
-  // TASK LEFT
-  checkboxWrapper.appendChild(taskCheckbox);
-  checkboxWrapper.appendChild(customCheckbox);
-
-  taskLeft.appendChild(checkboxWrapper);
-  taskLeft.appendChild(taskText);
-  taskText.textContent = `Task ${length + 1} : ${task}`;
-
-  // TASK ACTIONS
-  taskActions.appendChild(deleteBtn);
-  taskActions.appendChild(editBtn);
-
-  // TASK ITEM
   taskItem.appendChild(taskLeft);
   taskItem.appendChild(taskActions);
-  taskItem.id = `task_${length + 1}`;
 
-  console.log(taskItem.id);
-
-  // Add to list
   taskList.appendChild(taskItem);
 }
 
@@ -131,7 +130,9 @@ function reorderingTasksUponDeletion(position, taskList) {
 addBtn.addEventListener("click", () => {
   console.log(taskInput.value);
   if (addBtn.textContent === "Add") {
-    createNewTask(taskInput.value, taskList.children.length);
+    if (taskInput.value.trim() != "") {
+      createNewTask(taskInput.value, taskList.children.length);
+    }
   } else {
     updateTask();
   }
@@ -142,7 +143,9 @@ addBtn.addEventListener("click", () => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     if (addBtn.textContent === "Add") {
-      createNewTask(taskInput.value, taskList.children.length);
+      if (taskInput.value.trim() != "") {
+        createNewTask(taskInput.value, taskList.children.length);
+      }
     } else {
       updateTask();
     }
@@ -178,3 +181,4 @@ function updateTask() {
 function getCurrentTaskIndex(taskList, taskItem) {
   return [...taskList.children].indexOf(taskItem);
 }
+
