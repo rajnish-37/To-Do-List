@@ -52,13 +52,14 @@ function createTaskActions(taskItem, taskText) {
     let selectedTaskIndex = getCurrentTaskIndex(taskList, taskItem);
     reorderingTasksUponDeletion(selectedTaskIndex + 1, taskList);
     taskItem.remove();
-    deleteData(taskItem.dataset.taskId);
+    deleteDataFromDB(taskItem.dataset.taskId);
   });
 
   const editBtn = createButton("editBtn", "Edit", () => {
     let editedTask = extractTaskContent(taskText.textContent);
     taskInput.value = editedTask;
     taskInput.dataset.ref = getCurrentTaskIndex(taskList, taskItem);
+    taskInput.dataset.updateId = taskItem.dataset.taskId;
     addBtn.textContent = "Update";
   });
 
@@ -139,13 +140,19 @@ addBtn.addEventListener("click", () => {
   console.log(taskInput.value);
   if (addBtn.textContent === "Add") {
     if (taskInput.value.trim() != "") {
-      postData(`${taskInput.value}`, (newTask) => {
+      postDataOnDB(`${taskInput.value}`, (newTask) => {
         createNewTask(newTask.text, taskList.children.length, newTask.id);
         console.log(`The task Id of newly created DB Task is : ${newTask.id}`);
       });
     }
   } else {
-    updateTask();
+    updateDataOnDB(
+      taskInput.dataset.updateId,
+      taskInput.value,
+      (task) => {
+        updateTask(task)
+      },
+    );
   }
   taskInput.value = "";
 });
@@ -155,7 +162,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     if (addBtn.textContent === "Add") {
       if (taskInput.value.trim() != "") {
-        postData(`${taskInput.value}`, (newTask) => {
+        postDataOnDB(`${taskInput.value}`, (newTask) => {
           createNewTask(newTask.text, taskList.children.length, newTask.id);
           console.log(
             `The task Id of newly created DB Task is : ${newTask.id}`,
@@ -163,7 +170,13 @@ document.addEventListener("keydown", (event) => {
         });
       }
     } else {
-      updateTask();
+      updateDataOnDB(
+        taskInput.dataset.updateId,
+        taskInput.value,
+        (task) => {
+          updateTask(task);
+        },
+      );
     }
     taskInput.value = "";
   }
@@ -175,32 +188,40 @@ function extractTaskContent(text) {
   return match ? match[1] : null;
 }
 
-function updateTaskContent(taskInput, taskItem, taskIndex) {
-  // let taskText = taskItem.firstElementChild.children[1];
+function updateTaskContent(updatedTask, taskItem, taskIndex) {
   let taskText = taskItem.querySelector(".taskText");
 
   console.log(`Task to be edited is : ${taskText.textContent}`);
+  console.log(`Updated TextContent : ${updatedTask.text}`);
 
-  if (taskInput.value.trim() !== taskText.textContent) {
-    taskText.textContent = `Task ${taskIndex + 1} : ${taskInput.value}`;
+  if (updatedTask.text !== taskText.textContent) {
+    taskText.textContent = `Task ${taskIndex + 1} : ${updatedTask.text}`;
   }
 }
 
-function updateTask() {
+function updateTask(updatedTask) {
   let taskItems = [...taskList.children];
   let taskIndex = Number(taskInput.dataset.ref);
-  updateTaskContent(taskInput, taskItems[taskIndex], taskIndex);
+
+  if (taskItems[taskIndex]) {
+    updateTaskContent(updatedTask, taskItems[taskIndex], taskIndex);
+  } else {
+    console.error("No task item found at index", taskIndex);
+  }
+
   addBtn.textContent = "Add";
   taskInput.value = "";
   taskInput.dataset.ref = "";
+  taskInput.dataset.updateId = ""; // clear only after update
 }
+
 
 function getCurrentTaskIndex(taskList, taskItem) {
   return [...taskList.children].indexOf(taskItem);
 }
 
 /* INTEGRATION of Database */
-async function fetchData() {
+async function fetchDataFromDB() {
   let response = await fetch(API);
 
   let data = await response.json();
@@ -218,7 +239,7 @@ async function fetchData() {
   }
 }
 
-async function postData(task, callback) {
+async function postDataOnDB(task, callback) {
   let objData = {
     text: task.trim(),
   };
@@ -242,7 +263,7 @@ async function postData(task, callback) {
   }
 }
 
-async function deleteData(taskId) {
+async function deleteDataFromDB(taskId) {
   let response = await fetch(`${API}/${taskId}`, {
     method: "DELETE",
   });
@@ -254,5 +275,32 @@ async function deleteData(taskId) {
   }
 }
 
+async function updateDataOnDB(taskId, newText, callBack) {
+  let objData = {
+    text: newText.trim(),
+  };
 
-fetchData();
+  let response = await fetch(`${API}/${taskId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(objData),
+  });
+
+  if (response.ok) {
+    let updatedTask = await response.json();
+    console.log(
+      `Updated task - ID: ${updatedTask.id}, Text: ${updatedTask.text}`,
+    );
+
+    // Call your local UI update function only after DB success
+    if (typeof callBack === "function") {
+      callBack(updatedTask);
+    }
+  } else {
+    console.error(`Failed to update task ${taskId}`);
+  }
+}
+
+fetchDataFromDB();
