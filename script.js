@@ -52,6 +52,7 @@ function createTaskActions(taskItem, taskText) {
     let selectedTaskIndex = getCurrentTaskIndex(taskList, taskItem);
     reorderingTasksUponDeletion(selectedTaskIndex + 1, taskList);
     taskItem.remove();
+    deleteData(taskItem.dataset.taskId);
   });
 
   const editBtn = createButton("editBtn", "Edit", () => {
@@ -240,5 +241,18 @@ async function postData(task, callback) {
     callback(newTask);
   }
 }
+
+async function deleteData(taskId) {
+  let response = await fetch(`${API}/${taskId}`, {
+    method: "DELETE",
+  });
+
+  if (response.ok) {
+    console.log(`Task ${taskId} deleted successfully from DB`);
+  } else {
+    console.error(`Failed to delete task ${taskId}`);
+  }
+}
+
 
 fetchData();
